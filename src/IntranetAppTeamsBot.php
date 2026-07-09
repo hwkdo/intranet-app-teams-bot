@@ -13,7 +13,7 @@ class IntranetAppTeamsBot implements IntranetAppInterface
 
     public static function app_icon(): string
     {
-        return 'magnifying-glass';
+        return 'chat-bubble-left-right';
     }
 
     public static function identifier(): string

@@ -1,19 +1,23 @@
 @props([
     'heading' => '',
     'subheading' => '',
-    'navItems' => []
+    'navItems' => [],
 ])
 
 @php
     $defaultNavItems = [
-        ['label' => 'Übersicht', 'href' => route('apps.teams-bot.index'), 'icon' => 'home', 'description' => 'Zurück zur Übersicht', 'buttonText' => 'Übersicht anzeigen'],
-        ['label' => 'Beispielseite', 'href' => route('apps.teams-bot.example'), 'icon' => 'document-text', 'description' => 'Beispielseite anzeigen', 'buttonText' => 'Beispielseite öffnen'],
-        ['label' => 'Meine Einstellungen', 'href' => route('apps.teams-bot.settings.user'), 'icon' => 'cog-6-tooth', 'description' => 'Persönliche Einstellungen anpassen', 'buttonText' => 'Einstellungen öffnen'],
-        ['label' => 'App-Info', 'href' => route('apps.teams-bot.info'), 'icon' => 'information-circle', 'description' => 'Installierte Version und Release-Historie', 'buttonText' => 'App-Info anzeigen'],
-        ['label' => 'Admin', 'href' => route('apps.teams-bot.admin.index'), 'icon' => 'shield-check', 'description' => 'Administrationsbereich verwalten', 'buttonText' => 'Admin öffnen', 'permission' => 'manage-app-teams-bot']
+        ['label' => 'Status', 'href' => route('apps.teams-bot.status'), 'icon' => 'signal', 'description' => 'Bot-Status und Conversations', 'buttonText' => 'Status anzeigen', 'permission' => 'manage-app-teams-bot'],
+        ['label' => 'Benutzer', 'href' => route('apps.teams-bot.benutzer'), 'icon' => 'user', 'description' => 'Bot bei Benutzern installieren', 'buttonText' => 'Benutzer verwalten', 'permission' => 'manage-app-teams-bot'],
+        ['label' => 'Kanäle', 'href' => route('apps.teams-bot.kanaele'), 'icon' => 'hashtag', 'description' => 'Team-Kanäle und Testnachrichten', 'buttonText' => 'Kanäle öffnen', 'permission' => 'manage-app-teams-bot'],
+        ['label' => 'Gruppenchats', 'href' => route('apps.teams-bot.gruppenchats'), 'icon' => 'chat-bubble-left-right', 'description' => 'Gruppenchats verwalten', 'buttonText' => 'Gruppenchats öffnen', 'permission' => 'manage-app-teams-bot'],
+        ['label' => 'Activity Feed', 'href' => route('apps.teams-bot.activity-feed'), 'icon' => 'bell-alert', 'description' => 'Activity-Feed-Benachrichtigungen', 'buttonText' => 'Activity Feed öffnen', 'permission' => 'manage-app-teams-bot'],
+        ['label' => 'Einstellungen', 'href' => route('apps.teams-bot.admin.einstellungen'), 'icon' => 'cog-6-tooth', 'description' => 'App-Einstellungen verwalten', 'buttonText' => 'Einstellungen öffnen', 'permission' => 'manage-app-teams-bot'],
+        ['label' => 'Hintergrundbild', 'href' => route('apps.teams-bot.admin.hintergrundbild'), 'icon' => 'photo', 'description' => 'App-Hintergrundbild anpassen', 'buttonText' => 'Hintergrundbild öffnen', 'permission' => 'manage-app-teams-bot'],
+        ['label' => 'Meine Einstellungen', 'href' => route('apps.teams-bot.settings.user'), 'icon' => 'user-circle', 'description' => 'Persönliche Einstellungen', 'buttonText' => 'Einstellungen öffnen'],
+        ['label' => 'App-Info', 'href' => route('apps.teams-bot.info'), 'icon' => 'information-circle', 'description' => 'Version und Release-Historie', 'buttonText' => 'App-Info anzeigen'],
     ];
-    
-    $navItems = !empty($navItems) ? $navItems : $defaultNavItems;
+
+    $navItems = ! empty($navItems) ? $navItems : $defaultNavItems;
     $customBgUrl = \Hwkdo\IntranetAppBase\Models\AppBackground::getCustomBackgroundUrl('teams-bot');
 @endphp
 
@@ -25,31 +29,12 @@
     @endpush
 @endif
 
-@if(request()->routeIs('apps.teams-bot.index'))
-    <x-intranet-app-base::app-layout 
-        app-identifier="teams-bot"
-        :heading="$heading"
-        :subheading="$subheading"
-        :nav-items="$navItems"
-        :wrap-in-card="false"
-    >
-        <x-intranet-app-base::app-index-auto 
-            app-identifier="teams-bot"
-            app-name="TeamsBot App"
-            app-description="Generated app: Teams Bot"
-            :nav-items="$navItems"
-            welcome-title="Willkommen zur TeamsBot App"
-            welcome-description="Dies ist eine Beispiel-App, die als TeamsBot für neue Intranet-Apps dient."
-        />
-    </x-intranet-app-base::app-layout>
-@else
-    <x-intranet-app-base::app-layout 
-        app-identifier="teams-bot"
-        :heading="$heading"
-        :subheading="$subheading"
-        :nav-items="$navItems"
-        :wrap-in-card="true"
-    >
-        {{ $slot }}
-    </x-intranet-app-base::app-layout>
-@endif
+<x-intranet-app-base::app-layout
+    app-identifier="teams-bot"
+    :heading="$heading"
+    :subheading="$subheading"
+    :nav-items="$navItems"
+    :wrap-in-card="true"
+>
+    {{ $slot }}
+</x-intranet-app-base::app-layout>
