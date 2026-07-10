@@ -41,7 +41,7 @@ return [
         'auto_reply_message' => 'Dies ist ein Benachrichtigungs-Bot. Bitte bearbeiten Sie Anfragen im Intranet.',
         'mention_help_message' => env(
             'MSGRAPH_TEAMS_BOT_MENTION_HELP',
-            'Du kannst mir z. B. schreiben: „@Bot erstelle mir ein Ticket, dass …", um ein Ticket zu erstellen.',
+            'Du kannst mir z. B. schreiben: „frag die ki …" für eine KI-Antwort oder „@Bot erstelle mir ein Ticket, dass …", um ein Ticket zu erstellen.',
         ),
     ],
 

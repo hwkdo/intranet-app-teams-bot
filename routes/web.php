@@ -13,10 +13,14 @@ Route::middleware(['web', 'auth', 'can:manage-app-teams-bot'])->group(function (
         ->name('apps.teams-bot.gruppenchats');
     Route::livewire('apps/teams-bot/activity-feed', 'intranet-app-teams-bot::apps.teams-bot.activity-feed')
         ->name('apps.teams-bot.activity-feed');
-    Route::livewire('apps/teams-bot/admin/einstellungen', 'intranet-app-teams-bot::apps.teams-bot.admin.einstellungen')
+    Route::livewire('apps/teams-bot/admin', 'intranet-app-teams-bot::apps.teams-bot.admin.index')
+        ->name('apps.teams-bot.admin.index');
+    Route::redirect('apps/teams-bot/admin/einstellungen', '/apps/teams-bot/admin?tab=einstellungen')
         ->name('apps.teams-bot.admin.einstellungen');
-    Route::livewire('apps/teams-bot/admin/hintergrundbild', 'intranet-app-teams-bot::apps.teams-bot.admin.hintergrundbild')
+    Route::redirect('apps/teams-bot/admin/hintergrundbild', '/apps/teams-bot/admin?tab=hintergrundbild')
         ->name('apps.teams-bot.admin.hintergrundbild');
+    Route::redirect('apps/teams-bot/admin/ki', '/apps/teams-bot/admin?tab=ki')
+        ->name('apps.teams-bot.admin.ki');
 });
 
 Route::middleware(['web', 'auth', 'can:see-app-teams-bot'])->group(function (): void {

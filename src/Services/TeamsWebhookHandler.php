@@ -8,7 +8,9 @@ use Hwkdo\IntranetAppTeamsBot\Data\TeamsBotIncomingMessage;
 use Hwkdo\IntranetAppTeamsBot\Enums\TeamsBotConversationStatus;
 use Hwkdo\IntranetAppTeamsBot\Events\TeamsBotMessageReceived;
 use Hwkdo\IntranetAppTeamsBot\Http\TeamsSdkRestClient;
+use Hwkdo\IntranetAppTeamsBot\Models\IntranetAppTeamsBotSettings;
 use Hwkdo\IntranetAppTeamsBot\Models\TeamsBotConversation;
+use Hwkdo\IntranetAppTeamsBot\Support\TeamsAiCommand;
 use Hwkdo\IntranetAppTeamsBot\Support\TeamsMemberId;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -17,6 +19,7 @@ class TeamsWebhookHandler
 {
     public function __construct(
         private readonly TeamsBotMessagingService $messagingService,
+        private readonly TeamsAiChatService $aiChatService,
     ) {}
 
     /**
@@ -162,6 +165,10 @@ class TeamsWebhookHandler
             ]);
         }
 
+        if ($this->handleAskAiCommand($message, $activity, $conversationRef)) {
+            return;
+        }
+
         if ($this->dispatchToProcessors($message, $activity, $conversationRef)) {
             return;
         }
@@ -171,6 +178,40 @@ class TeamsWebhookHandler
         if (is_string($reply) && $reply !== '') {
             $this->messagingService->replyToWebhookMessage($activity, $conversationRef, $reply);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $activity
+     * @param  array<string, mixed>  $conversationRef
+     */
+    private function handleAskAiCommand(
+        TeamsBotIncomingMessage $message,
+        array $activity,
+        array $conversationRef,
+    ): bool {
+        $settings = IntranetAppTeamsBotSettings::resolvedAppSettings();
+
+        if (! $settings->aiChatEnabled) {
+            return false;
+        }
+
+        $trigger = trim($settings->aiChatTriggerPhrase) !== ''
+            ? $settings->aiChatTriggerPhrase
+            : TeamsAiCommand::DEFAULT_TRIGGER;
+
+        if (! TeamsAiCommand::matches($message->text, $trigger)) {
+            return false;
+        }
+
+        $reply = $this->aiChatService->answer($message);
+
+        if ($reply === '') {
+            return false;
+        }
+
+        $this->messagingService->replyToWebhookMessage($activity, $conversationRef, $reply);
+
+        return true;
     }
 
     /**

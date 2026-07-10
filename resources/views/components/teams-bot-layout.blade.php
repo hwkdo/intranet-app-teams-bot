@@ -11,10 +11,10 @@
         ['label' => 'Kanäle', 'href' => route('apps.teams-bot.kanaele'), 'icon' => 'hashtag', 'description' => 'Team-Kanäle und Testnachrichten', 'buttonText' => 'Kanäle öffnen', 'permission' => 'manage-app-teams-bot'],
         ['label' => 'Gruppenchats', 'href' => route('apps.teams-bot.gruppenchats'), 'icon' => 'chat-bubble-left-right', 'description' => 'Gruppenchats verwalten', 'buttonText' => 'Gruppenchats öffnen', 'permission' => 'manage-app-teams-bot'],
         ['label' => 'Activity Feed', 'href' => route('apps.teams-bot.activity-feed'), 'icon' => 'bell-alert', 'description' => 'Activity-Feed-Benachrichtigungen', 'buttonText' => 'Activity Feed öffnen', 'permission' => 'manage-app-teams-bot'],
-        ['label' => 'Einstellungen', 'href' => route('apps.teams-bot.admin.einstellungen'), 'icon' => 'cog-6-tooth', 'description' => 'App-Einstellungen verwalten', 'buttonText' => 'Einstellungen öffnen', 'permission' => 'manage-app-teams-bot'],
-        ['label' => 'Hintergrundbild', 'href' => route('apps.teams-bot.admin.hintergrundbild'), 'icon' => 'photo', 'description' => 'App-Hintergrundbild anpassen', 'buttonText' => 'Hintergrundbild öffnen', 'permission' => 'manage-app-teams-bot'],
-        ['label' => 'Meine Einstellungen', 'href' => route('apps.teams-bot.settings.user'), 'icon' => 'user-circle', 'description' => 'Persönliche Einstellungen', 'buttonText' => 'Einstellungen öffnen'],
-        ['label' => 'App-Info', 'href' => route('apps.teams-bot.info'), 'icon' => 'information-circle', 'description' => 'Version und Release-Historie', 'buttonText' => 'App-Info anzeigen'],
+        ['type' => 'separator', 'label' => 'Admin', 'permission' => 'manage-app-teams-bot'],
+        ['label' => 'Admin', 'href' => route('apps.teams-bot.admin.index'), 'icon' => 'shield-check', 'description' => 'KI, Einstellungen und Hintergrundbild', 'buttonText' => 'Admin öffnen', 'permission' => 'manage-app-teams-bot', 'welcomeSection' => 'settings'],
+        ['label' => 'Meine Einstellungen', 'href' => route('apps.teams-bot.settings.user'), 'icon' => 'user-circle', 'description' => 'Persönliche Einstellungen', 'buttonText' => 'Einstellungen öffnen', 'welcomeSection' => 'settings'],
+        ['label' => 'App-Info', 'href' => route('apps.teams-bot.info'), 'icon' => 'information-circle', 'description' => 'Version und Release-Historie', 'buttonText' => 'App-Info anzeigen', 'welcomeSection' => 'settings'],
     ];
 
     $navItems = ! empty($navItems) ? $navItems : $defaultNavItems;
