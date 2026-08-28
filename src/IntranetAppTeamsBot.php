@@ -33,7 +33,7 @@ class IntranetAppTeamsBot implements IntranetAppInterface
     
     public static function userSettingsClass(): ?string
     {
-        return \Hwkdo\IntranetAppTeamsBot\Data\UserSettings::class;
+        return null;
     }
     
     public static function appSettingsClass(): ?string

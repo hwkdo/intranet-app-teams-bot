@@ -12,9 +12,7 @@
         ['label' => 'Gruppenchats', 'href' => route('apps.teams-bot.gruppenchats'), 'icon' => 'chat-bubble-left-right', 'description' => 'Gruppenchats verwalten', 'buttonText' => 'Gruppenchats öffnen', 'permission' => 'manage-app-teams-bot'],
         ['label' => 'Activity Feed', 'href' => route('apps.teams-bot.activity-feed'), 'icon' => 'bell-alert', 'description' => 'Activity-Feed-Benachrichtigungen', 'buttonText' => 'Activity Feed öffnen', 'permission' => 'manage-app-teams-bot'],
         ['type' => 'separator', 'label' => 'Admin', 'permission' => 'manage-app-teams-bot'],
-        ['label' => 'Admin', 'href' => route('apps.teams-bot.admin.index'), 'icon' => 'shield-check', 'description' => 'KI, Einstellungen und Hintergrundbild', 'buttonText' => 'Admin öffnen', 'permission' => 'manage-app-teams-bot', 'welcomeSection' => 'settings'],
-        ['label' => 'Meine Einstellungen', 'href' => route('apps.teams-bot.settings.user'), 'icon' => 'user-circle', 'description' => 'Persönliche Einstellungen', 'buttonText' => 'Einstellungen öffnen', 'welcomeSection' => 'settings'],
-        ['label' => 'App-Info', 'href' => route('apps.teams-bot.info'), 'icon' => 'information-circle', 'description' => 'Version und Release-Historie', 'buttonText' => 'App-Info anzeigen', 'welcomeSection' => 'settings'],
+        ['label' => 'Admin', 'href' => route('apps.teams-bot.admin.index'), 'icon' => 'shield-check', 'description' => 'KI, Einstellungen und Hintergrundbild', 'buttonText' => 'Admin öffnen', 'permission' => 'manage-app-teams-bot', 'welcomeSection' => 'settings'],        ['label' => 'App-Info', 'href' => route('apps.teams-bot.info'), 'icon' => 'information-circle', 'description' => 'Version und Release-Historie', 'buttonText' => 'App-Info anzeigen', 'welcomeSection' => 'settings'],
     ];
 
     $navItems = ! empty($navItems) ? $navItems : $defaultNavItems;
