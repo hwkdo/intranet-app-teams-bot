@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hwkdo\IntranetAppTeamsBot\Http\Controllers;
 
 use Hwkdo\IntranetAppTeamsBot\Services\TeamsWebhookHandler;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -13,7 +14,7 @@ use Throwable;
 
 class TeamsWebhookController
 {
-    public function __invoke(Request $request, TeamsWebhookHandler $handler): Response
+    public function __invoke(Request $request, TeamsWebhookHandler $handler): Response|JsonResponse
     {
         if (! config('intranet-app-teams-bot.bot.enabled')) {
             return response('', 404);
@@ -39,12 +40,22 @@ class TeamsWebhookController
         }
 
         try {
-            $handler->handle($event, $payload);
+            $result = $handler->handle($event, $payload);
         } catch (Throwable $exception) {
             Log::error('Teams Webhook Verarbeitung fehlgeschlagen', [
                 'event' => $event,
                 'message' => $exception->getMessage(),
             ]);
+
+            if ($event === 'adaptive-card.action') {
+                return response()->json([
+                    'invokeResponse' => [
+                        'statusCode' => 200,
+                        'type' => 'application/vnd.microsoft.activity.message',
+                        'value' => 'Die Aktion ist fehlgeschlagen. Bitte im Intranet fortsetzen.',
+                    ],
+                ]);
+            }
 
             return response('', 500);
         }
@@ -55,6 +66,10 @@ class TeamsWebhookController
                 'conversation_id' => $payload['conversationRef']['conversationId'] ?? null,
                 'user_aad_id' => $payload['conversationRef']['userAadId'] ?? null,
             ]);
+        }
+
+        if (is_array($result) && isset($result['invokeResponse'])) {
+            return response()->json($result);
         }
 
         return response()->noContent();

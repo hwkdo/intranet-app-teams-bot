@@ -21,9 +21,12 @@ class TeamsBotMessagingService
         private readonly TeamsBotConversationResolver $conversationResolver,
     ) {}
 
-    public function queueMessage(string $azureUserId, string $text): void
+    /**
+     * @param  array<string, mixed>|null  $card
+     */
+    public function queueMessage(string $azureUserId, string $text, ?array $card = null): void
     {
-        SendTeamsBotMessageJob::dispatch($azureUserId, $text);
+        SendTeamsBotMessageJob::dispatch($azureUserId, $text, $card);
     }
 
     public function queueChannelMessage(string $teamId, string $channelId, string $text): void
@@ -72,10 +75,13 @@ class TeamsBotMessagingService
         }
     }
 
-    public function sendMessageSync(string $azureUserId, string $text): void
+    /**
+     * @param  array<string, mixed>|null  $card
+     */
+    public function sendMessageSync(string $azureUserId, string $text, ?array $card = null): void
     {
         $conversation = TeamsBotConversation::query()
-            ->where('azure_user_id', $azureUserId)
+            ->whereRaw('LOWER(azure_user_id) = ?', [strtolower($azureUserId)])
             ->first();
 
         if ($conversation === null) {
@@ -99,7 +105,7 @@ class TeamsBotMessagingService
 
         try {
             $result = $this->sdkClient->sendMessage(
-                $this->buildSendPayload($conversation, $azureUserId, $text),
+                $this->buildSendPayload($conversation, $azureUserId, $text, $card),
             );
 
             $this->syncConversationAfterSend($conversation, $result['conversationId']);
@@ -187,16 +193,25 @@ class TeamsBotMessagingService
     }
 
     /**
-     * @return array<string, string>
+     * @param  array<string, mixed>|null  $card
+     * @return array<string, mixed>
      */
-    private function buildSendPayload(TeamsBotConversation $conversation, string $azureUserId, string $text): array
-    {
+    private function buildSendPayload(
+        TeamsBotConversation $conversation,
+        string $azureUserId,
+        string $text,
+        ?array $card = null,
+    ): array {
         $payload = ['text' => $text];
 
         if (filled($conversation->conversation_id)) {
             $payload['conversationId'] = $conversation->conversation_id;
         } else {
             $payload['userAadId'] = $azureUserId;
+        }
+
+        if (is_array($card) && $card !== []) {
+            $payload['card'] = $card;
         }
 
         return $payload;

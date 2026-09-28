@@ -4,18 +4,24 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTeamsBot\Channels;
 
-use Hwkdo\IntranetAppTeamsBot\Interfaces\TeamsActivityFeedServiceInterface;
+use Hwkdo\IntranetAppTeamsBot\Services\TeamsBotMessagingService;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class TeamsChannel
 {
     public function __construct(
-        private readonly TeamsActivityFeedServiceInterface $activityFeedService,
+        private readonly TeamsBotMessagingService $messagingService,
     ) {}
 
     public function send(object $notifiable, Notification $notification): void
     {
         if (! method_exists($notification, 'toTeams')) {
+            return;
+        }
+
+        if (! config('intranet-app-teams-bot.bot.enabled')) {
             return;
         }
 
@@ -27,22 +33,32 @@ class TeamsChannel
             return;
         }
 
-        if (! $this->activityFeedService->isEnabled()) {
-            return;
-        }
-
+        $azureUserId = strtolower($azureUserId);
         $message = $notification->toTeams($notifiable);
 
         if (! is_array($message)) {
             return;
         }
 
-        $this->activityFeedService->sendNotification(
-            $azureUserId,
-            (string) ($message['preview'] ?? $message['body'] ?? ''),
-            isset($message['actor']) ? (string) $message['actor'] : null,
-            isset($message['topic']) ? (string) $message['topic'] : null,
-            isset($message['url']) ? (string) $message['url'] : null,
-        );
+        $text = trim((string) ($message['preview'] ?? $message['body'] ?? ''));
+        $card = $message['card'] ?? null;
+
+        if (! is_array($card) && $text === '') {
+            return;
+        }
+
+        try {
+            $this->messagingService->queueMessage(
+                $azureUserId,
+                $text !== '' ? $text : 'Benachrichtigung',
+                is_array($card) ? $card : null,
+            );
+        } catch (Throwable $exception) {
+            Log::error('Teams-Bot-Notification fehlgeschlagen', [
+                'azure_user_id' => $azureUserId,
+                'notification' => $notification::class,
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 }

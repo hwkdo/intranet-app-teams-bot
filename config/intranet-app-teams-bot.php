@@ -64,7 +64,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Teams Activity Feed (Benachrichtigungen im Activity Feed)
+    | Adaptive Card Action Handler
+    |--------------------------------------------------------------------------
+    |
+    | class-string list of TeamsAdaptiveCardActionHandlerInterface implementations
+    */
+    'adaptive_card_action_handlers' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Teams Activity Feed (Legacy / Admin-Tools)
     |--------------------------------------------------------------------------
     |
     | Env: MSGRAPH_TEAMS_ACTIVITY_FEED_ENABLED, MSGRAPH_TEAMS_ACTIVITY_FEED_TYPE,

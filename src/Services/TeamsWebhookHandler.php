@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTeamsBot\Services;
 
+use Hwkdo\IntranetAppTeamsBot\Data\TeamsAdaptiveCardAction;
 use Hwkdo\IntranetAppTeamsBot\Data\TeamsBotIncomingMessage;
 use Hwkdo\IntranetAppTeamsBot\Enums\TeamsBotConversationStatus;
 use Hwkdo\IntranetAppTeamsBot\Events\TeamsBotMessageReceived;
 use Hwkdo\IntranetAppTeamsBot\Http\TeamsSdkRestClient;
 use Hwkdo\IntranetAppTeamsBot\Models\IntranetAppTeamsBotSettings;
 use Hwkdo\IntranetAppTeamsBot\Models\TeamsBotConversation;
+use Hwkdo\IntranetAppTeamsBot\Support\TeamsAdaptiveCardInvokeResponse;
 use Hwkdo\IntranetAppTeamsBot\Support\TeamsAiCommand;
 use Hwkdo\IntranetAppTeamsBot\Support\TeamsMemberId;
 use Illuminate\Support\Facades\Log;
@@ -20,34 +22,48 @@ class TeamsWebhookHandler
     public function __construct(
         private readonly TeamsBotMessagingService $messagingService,
         private readonly TeamsAiChatService $aiChatService,
+        private readonly TeamsAdaptiveCardActionDispatcher $adaptiveCardActionDispatcher,
     ) {}
 
     /**
      * @param  array<string, mixed>  $payload
+     * @return array{invokeResponse: array{statusCode: int, type: string, value: mixed}}|null
      */
-    public function handle(string $event, array $payload): void
+    public function handle(string $event, array $payload): ?array
     {
         $activity = is_array($payload['activity'] ?? null) ? $payload['activity'] : [];
         $conversationRef = is_array($payload['conversationRef'] ?? null) ? $payload['conversationRef'] : [];
 
-        match ($event) {
+        return match ($event) {
             'install.add', 'conversationUpdate.channelMemberAdded' => $this->handleInstallAdd($activity, $conversationRef),
             'install.remove' => $this->handleInstallRemove($conversationRef),
             'message', 'mention' => $this->handleMessage($event, $activity, $conversationRef),
-            default => Log::debug('Teams Webhook Event ignoriert', ['event' => $event]),
+            'adaptive-card.action' => $this->handleAdaptiveCardAction($activity, $conversationRef),
+            default => $this->ignoreEvent($event),
         };
+    }
+
+    /**
+     * @return null
+     */
+    private function ignoreEvent(string $event): null
+    {
+        Log::debug('Teams Webhook Event ignoriert', ['event' => $event]);
+
+        return null;
     }
 
     /**
      * @param  array<string, mixed>  $activity
      * @param  array<string, mixed>  $conversationRef
+     * @return null
      */
-    private function handleInstallAdd(array $activity, array $conversationRef): void
+    private function handleInstallAdd(array $activity, array $conversationRef): null
     {
         $azureUserId = $this->resolveAzureUserId($activity, $conversationRef);
 
         if ($azureUserId === null) {
-            return;
+            return null;
         }
 
         $conversation = TeamsBotConversation::query()
@@ -69,17 +85,20 @@ class TeamsWebhookHandler
             'azure_user_id' => $azureUserId,
             'conversation_id' => $conversation->fresh()?->conversation_id,
         ]);
+
+        return null;
     }
 
     /**
      * @param  array<string, mixed>  $conversationRef
+     * @return null
      */
-    private function handleInstallRemove(array $conversationRef): void
+    private function handleInstallRemove(array $conversationRef): null
     {
         $azureUserId = $conversationRef['userAadId'] ?? null;
 
         if (! is_string($azureUserId) || $azureUserId === '') {
-            return;
+            return null;
         }
 
         TeamsBotConversation::query()
@@ -88,13 +107,16 @@ class TeamsWebhookHandler
                 'status' => TeamsBotConversationStatus::Uninstalled,
                 'last_error' => null,
             ]);
+
+        return null;
     }
 
     /**
      * @param  array<string, mixed>  $activity
      * @param  array<string, mixed>  $conversationRef
+     * @return null
      */
-    private function handleMessage(string $event, array $activity, array $conversationRef): void
+    private function handleMessage(string $event, array $activity, array $conversationRef): null
     {
         $fromId = $activity['from']['id'] ?? null;
         $botAppId = config('intranet-app-teams-bot.bot.app_id');
@@ -104,7 +126,7 @@ class TeamsWebhookHandler
                 'from_id' => $fromId,
             ]);
 
-            return;
+            return null;
         }
 
         $azureUserId = $this->resolveAzureUserId($activity, $conversationRef);
@@ -124,12 +146,12 @@ class TeamsWebhookHandler
         // Das separate 'mention'-Event ist ein Duplikat des 'message'-Events (Kanal/Gruppenchat).
         // Verarbeitung erfolgt am message-Event, wenn der Bot erwähnt wurde.
         if ($event === 'mention') {
-            return;
+            return null;
         }
 
         // In Kanälen und Gruppenchats nur auf @mentions reagieren.
         if (! $message->isDirectMessage() && ! $message->isMention) {
-            return;
+            return null;
         }
 
         Log::info('Teams Bot Nachricht vom Benutzer empfangen', [
@@ -166,11 +188,11 @@ class TeamsWebhookHandler
         }
 
         if ($this->handleAskAiCommand($message, $activity, $conversationRef)) {
-            return;
+            return null;
         }
 
         if ($this->dispatchToProcessors($message, $activity, $conversationRef)) {
-            return;
+            return null;
         }
 
         $reply = $this->resolveFallbackReply($message);
@@ -178,6 +200,127 @@ class TeamsWebhookHandler
         if (is_string($reply) && $reply !== '') {
             $this->messagingService->replyToWebhookMessage($activity, $conversationRef, $reply);
         }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $activity
+     * @param  array<string, mixed>  $conversationRef
+     * @return array{invokeResponse: array{statusCode: int, type: string, value: mixed}}
+     */
+    private function handleAdaptiveCardAction(array $activity, array $conversationRef): array
+    {
+        $azureUserId = $this->resolveAzureUserId($activity, $conversationRef);
+
+        if ($azureUserId === null) {
+            return [
+                'invokeResponse' => TeamsAdaptiveCardInvokeResponse::message(
+                    'Benutzer konnte nicht ermittelt werden.',
+                ),
+            ];
+        }
+
+        $conversation = TeamsBotConversation::query()
+            ->where('azure_user_id', $azureUserId)
+            ->first();
+
+        if ($conversation !== null) {
+            $this->syncConversationFromRef($conversation, $conversationRef, $activity);
+        }
+
+        $user = $this->resolveUserByAzureId($azureUserId);
+
+        if ($user === null) {
+            return [
+                'invokeResponse' => TeamsAdaptiveCardInvokeResponse::message(
+                    'Kein Intranet-Benutzer für dieses Teams-Konto gefunden.',
+                ),
+            ];
+        }
+
+        [$verb, $data] = $this->extractAdaptiveCardAction($activity);
+
+        if ($verb === '') {
+            return [
+                'invokeResponse' => TeamsAdaptiveCardInvokeResponse::message(
+                    'Ungültige Card-Aktion.',
+                ),
+            ];
+        }
+
+        $action = new TeamsAdaptiveCardAction(
+            azureUserId: $azureUserId,
+            verb: $verb,
+            data: $data,
+            activity: $activity,
+            conversationRef: $conversationRef,
+        );
+
+        return [
+            'invokeResponse' => $this->adaptiveCardActionDispatcher->dispatch($user, $action),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $activity
+     * @return array{0: string, 1: array<string, mixed>}
+     */
+    private function extractAdaptiveCardAction(array $activity): array
+    {
+        $value = is_array($activity['value'] ?? null) ? $activity['value'] : [];
+        $action = is_array($value['action'] ?? null) ? $value['action'] : [];
+        $actionData = is_array($action['data'] ?? null) ? $action['data'] : [];
+
+        $verb = $action['verb'] ?? $value['verb'] ?? $actionData['verb'] ?? '';
+        $verb = is_string($verb) ? trim($verb) : '';
+
+        $data = array_merge($value, $actionData);
+        unset($data['action'], $data['verb']);
+
+        return [$verb, $data];
+    }
+
+    /**
+     * Resolve intranet Eloquent user via DB only (not the LDAP auth provider model).
+     */
+    private function resolveUserByAzureId(string $azureUserId): ?\Illuminate\Contracts\Auth\Authenticatable
+    {
+        $userClass = config('auth.providers.users.database.model')
+            ?? config('auth.providers.users.model')
+            ?? \App\Models\User::class;
+
+        // LDAP provider sets users.model to the AD class; Eloquent users live under database.model.
+        if (! is_string($userClass)
+            || ! class_exists($userClass)
+            || ! is_subclass_of($userClass, \Illuminate\Database\Eloquent\Model::class)
+        ) {
+            $userClass = \App\Models\User::class;
+        }
+
+        $normalized = strtolower(trim($azureUserId));
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        /** @var \Illuminate\Database\Eloquent\Model $model */
+        $model = new $userClass;
+        $table = $model->getTable();
+        $connection = $model->getConnectionName();
+
+        $userId = \Illuminate\Support\Facades\DB::connection($connection)
+            ->table($table)
+            ->whereRaw('LOWER(socialite_id) = ?', [$normalized])
+            ->value($model->getKeyName());
+
+        if ($userId === null) {
+            return null;
+        }
+
+        $user = $userClass::query()->find($userId);
+
+        return $user instanceof \Illuminate\Contracts\Auth\Authenticatable ? $user : null;
     }
 
     /**
