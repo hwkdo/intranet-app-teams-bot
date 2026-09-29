@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTeamsBot;
 
-use Hwkdo\IntranetAppBase\Data\SetupDefinition;
 use Hwkdo\IntranetAppBase\Interfaces\IntranetAppInterface;
-use Hwkdo\IntranetAppBase\Interfaces\ProvidesSetupInterface;
 use Illuminate\Support\Collection;
 
-class IntranetAppTeamsBot implements IntranetAppInterface, ProvidesSetupInterface
+class IntranetAppTeamsBot implements IntranetAppInterface
 {
     public static function app_name(): string
     {
@@ -49,21 +47,5 @@ class IntranetAppTeamsBot implements IntranetAppInterface, ProvidesSetupInterfac
     public static function mcpServers(): array
     {
         return [];
-    }
-
-    public static function setups(): array
-    {
-        return [
-            new SetupDefinition(
-                key: 'teams-bot',
-                title: 'Teams-Benachrichtigungen einrichten',
-                description: 'Teams-Bot installieren, damit Benachrichtigungen als 1:1-Chat zugestellt werden.',
-                group: 'app',
-                appIdentifier: self::identifier(),
-                appName: self::app_name(),
-                component: 'intranet-app-teams-bot::setup.user-setup',
-                sort: 80,
-            ),
-        ];
     }
 }
