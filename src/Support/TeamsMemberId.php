@@ -20,6 +20,29 @@ class TeamsMemberId
     }
 
     /**
+     * Teams-User-MRI für Adaptive-Card-Refresh (userIds).
+     * In personalen Chats ist from.id oft `29:1{aadObjectId}`.
+     */
+    public static function personalMriFromAzureUserId(string $azureUserIdOrMri): ?string
+    {
+        $value = trim($azureUserIdOrMri);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (str_starts_with($value, '29:')) {
+            return $value;
+        }
+
+        if (preg_match('/^[0-9a-f-]{36}$/i', $value) === 1) {
+            return '29:1'.strtolower($value);
+        }
+
+        return null;
+    }
+
+    /**
      * @param  array<string, mixed>  $activity
      */
     public static function normalizeMessageText(array $activity): string
