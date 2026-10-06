@@ -47,6 +47,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Hermes (nur Installation über Microsoft Graph)
+    |--------------------------------------------------------------------------
+    |
+    | Der Bot läuft außerhalb des Intranets. Hier wird nur die Katalog-App
+    | bei Benutzern, in Teams und in Gruppenchats installiert.
+    | Kein Webhook, keine Nachrichten, kein Self-Service.
+    |
+    | Env: MSGRAPH_HERMES_BOT_ENABLED, MSGRAPH_HERMES_BOT_CATALOG_ID,
+    |      MSGRAPH_HERMES_BOT_GRAPH_REGISTRATION (optional, Standard: teams_bot)
+    */
+    'hermes' => [
+        'label' => 'Hermes',
+        'enabled' => env('MSGRAPH_HERMES_BOT_ENABLED', false),
+        'teams_app_id' => env('MSGRAPH_HERMES_BOT_CATALOG_ID'),
+        'graph_registration' => env('MSGRAPH_HERMES_BOT_GRAPH_REGISTRATION', 'teams_bot'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | teams-sdk-rest (Node.js Teams SDK Wrapper)
     |--------------------------------------------------------------------------
     |

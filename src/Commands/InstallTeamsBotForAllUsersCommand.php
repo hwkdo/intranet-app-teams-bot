@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTeamsBot\Commands;
 
-use Hwkdo\MsGraphLaravel\Interfaces\MsGraphUserServiceInterface;
+use Hwkdo\IntranetAppTeamsBot\Data\TeamsBotProfile;
 use Hwkdo\IntranetAppTeamsBot\Services\TeamsBotInstallationService;
+use Hwkdo\IntranetAppTeamsBot\Services\TeamsCatalogInstallationService;
+use Hwkdo\IntranetAppTeamsBot\Support\TeamsBotRegistry;
+use Hwkdo\MsGraphLaravel\Interfaces\MsGraphUserServiceInterface;
 use Illuminate\Console\Command;
+use InvalidArgumentException;
 use Throwable;
 
 class InstallTeamsBotForAllUsersCommand extends Command
 {
     protected $signature = 'teams-bot:install-all
+                            {bot=intranet : Bot-Profil, intranet oder hermes}
                             {--top=100 : Anzahl Benutzer pro Graph-Seite}
                             {--search= : Optionaler Suchfilter für Benutzer}';
 
@@ -20,9 +25,27 @@ class InstallTeamsBotForAllUsersCommand extends Command
     public function handle(
         MsGraphUserServiceInterface $userService,
         TeamsBotInstallationService $installationService,
+        TeamsCatalogInstallationService $catalogInstallationService,
+        TeamsBotRegistry $registry,
     ): int {
-        if (! config('intranet-app-teams-bot.bot.enabled')) {
-            $this->error('Teams Bot ist deaktiviert (MSGRAPH_TEAMS_BOT_ENABLED=false).');
+        try {
+            $profile = $registry->get((string) $this->argument('bot'));
+        } catch (InvalidArgumentException $exception) {
+            $this->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        if (! $profile->enabled) {
+            $this->error($profile->managesMessaging
+                ? 'Teams Bot ist deaktiviert (MSGRAPH_TEAMS_BOT_ENABLED=false).'
+                : $profile->label.' ist deaktiviert.');
+
+            return self::FAILURE;
+        }
+
+        if (! $profile->managesMessaging && ! filled($profile->teamsAppId)) {
+            $this->error('MSGRAPH_HERMES_BOT_CATALOG_ID ist nicht konfiguriert.');
 
             return self::FAILURE;
         }
@@ -48,7 +71,14 @@ class InstallTeamsBotForAllUsersCommand extends Command
                 }
 
                 try {
-                    $installationService->installForUser($azureUserId, $upn, is_string($displayName) ? $displayName : null);
+                    $this->queueInstall(
+                        $profile,
+                        $installationService,
+                        $catalogInstallationService,
+                        $azureUserId,
+                        $upn,
+                        is_string($displayName) ? $displayName : null,
+                    );
                     $installed++;
                     $this->line("Queued: {$upn}");
                 } catch (Throwable $exception) {
@@ -61,5 +91,22 @@ class InstallTeamsBotForAllUsersCommand extends Command
         $this->info("Installation gequeued: {$installed}, Fehler: {$failed}");
 
         return self::SUCCESS;
+    }
+
+    private function queueInstall(
+        TeamsBotProfile $profile,
+        TeamsBotInstallationService $installationService,
+        TeamsCatalogInstallationService $catalogInstallationService,
+        string $azureUserId,
+        string $upn,
+        ?string $displayName,
+    ): void {
+        if ($profile->managesMessaging) {
+            $installationService->installForUser($azureUserId, $upn, $displayName);
+
+            return;
+        }
+
+        $catalogInstallationService->installForUser($azureUserId, $upn, $displayName);
     }
 }

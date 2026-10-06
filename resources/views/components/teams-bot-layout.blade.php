@@ -16,6 +16,21 @@
     ];
 
     $navItems = ! empty($navItems) ? $navItems : $defaultNavItems;
+
+    $selectedBot = \Hwkdo\IntranetAppTeamsBot\Support\TeamsBotSelection::profile();
+
+    if (! $selectedBot->managesMessaging) {
+        $allowedHrefs = [
+            route('apps.teams-bot.benutzer'),
+            route('apps.teams-bot.kanaele'),
+            route('apps.teams-bot.gruppenchats'),
+        ];
+
+        $navItems = array_values(array_filter(
+            $navItems,
+            fn (array $item): bool => isset($item['href']) && in_array($item['href'], $allowedHrefs, true),
+        ));
+    }
     $customBgUrl = \Hwkdo\IntranetAppBase\Models\AppBackground::getCustomBackgroundUrl('teams-bot');
 @endphp
 
@@ -34,5 +49,9 @@
     :nav-items="$navItems"
     :wrap-in-card="true"
 >
+    @can('manage-app-teams-bot')
+        @livewire('intranet-app-teams-bot::apps.teams-bot.bot-switcher')
+    @endcan
+
     {{ $slot }}
 </x-intranet-app-base::app-layout>

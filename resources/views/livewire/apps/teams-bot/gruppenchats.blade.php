@@ -2,12 +2,16 @@
 
 use Flux\Flux;
 use Hwkdo\IntranetAppTeamsBot\Interfaces\TeamsBotServiceInterface;
+use Hwkdo\IntranetAppTeamsBot\Livewire\InteractsWithSelectedTeamsBot;
+use Hwkdo\IntranetAppTeamsBot\Services\TeamsCatalogInstallationService;
 use Hwkdo\MsGraphLaravel\Interfaces\MsGraphUserServiceInterface;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Teams Bot – Gruppenchats')] class extends Component
 {
+    use InteractsWithSelectedTeamsBot;
+
     public string $chatUserSearch = '';
 
     /** @var array<int, array{id: string, upn: string, displayName: string}> */
@@ -87,10 +91,25 @@ new #[Title('Teams Bot – Gruppenchats')] class extends Component
             return;
         }
 
-        try {
-            app(TeamsBotServiceInterface::class)->installForChat($this->selectedChatId);
+        $chatLabel = collect($this->groupChats)->firstWhere('chatId', $this->selectedChatId)['label'] ?? null;
 
-            Flux::toast(variant: 'success', text: 'Bot wurde im Gruppenchat installiert bzw. auf die neueste Version aktualisiert.');
+        try {
+            if ($this->selectedBot->managesMessaging) {
+                app(TeamsBotServiceInterface::class)->installForChat($this->selectedChatId);
+
+                Flux::toast(variant: 'success', text: 'Bot wurde im Gruppenchat installiert bzw. auf die neueste Version aktualisiert.');
+
+                return;
+            }
+
+            app(TeamsCatalogInstallationService::class)->installForChat(
+                $this->selectedChatId,
+                is_string($chatLabel) ? $chatLabel : null,
+            );
+
+            $this->forgetCatalogInstallations();
+
+            Flux::toast(variant: 'success', text: $this->selectedBot->label.' wurde im Gruppenchat installiert bzw. aktualisiert.');
         } catch (\Throwable $exception) {
             Flux::toast(variant: 'danger', text: 'Gruppenchat-Installation fehlgeschlagen: '.$exception->getMessage());
         }
@@ -124,18 +143,23 @@ new #[Title('Teams Bot – Gruppenchats')] class extends Component
 ?>
 
 <div>
-<x-intranet-app-teams-bot::teams-bot-layout heading="Teams Bot" subheading="Gruppenchats">
+<x-intranet-app-teams-bot::teams-bot-layout :heading="$this->selectedBot->managesMessaging ? 'Teams Bot' : $this->selectedBot->label" subheading="Gruppenchats">
     <flux:card class="glass-card">
-        <flux:heading size="lg" class="mb-4">Gruppenchat & Testnachricht</flux:heading>
+        <flux:heading size="lg" class="mb-4">
+            {{ $this->selectedBot->managesMessaging ? 'Gruppenchat & Testnachricht' : 'Gruppenchat installieren' }}
+        </flux:heading>
 
         <flux:callout class="mb-4" icon="information-circle" variant="secondary">
             Gruppenchats haben oft keinen Namen, daher werden sie über einen
             <span class="font-semibold">Teilnehmer</span> gesucht: Benutzer auswählen, dann dessen
-            Gruppenchats laden. Der Bot muss im Gruppenchat installiert sein.
+            Gruppenchats laden.
+            @if($this->selectedBot->managesMessaging)
+                Der Bot muss im Gruppenchat installiert sein.
+            @endif
         </flux:callout>
 
         <div class="space-y-4">
-            <div class="relative">
+            <div>
                 <flux:input
                     wire:model.live.debounce.300ms="chatUserSearch"
                     label="Teilnehmer suchen"
@@ -143,7 +167,7 @@ new #[Title('Teams Bot – Gruppenchats')] class extends Component
                 />
 
                 @if($chatUserSearchResults !== [])
-                    <div class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-xl border border-[#d0e3f9] bg-white shadow-lg dark:border-white/10 dark:bg-[#04214e]">
+                    <div class="mt-1 max-h-64 overflow-y-auto rounded-xl border border-[#d0e3f9] bg-white shadow-lg dark:border-white/10 dark:bg-[#04214e]">
                         @foreach($chatUserSearchResults as $result)
                             <button
                                 type="button"
@@ -188,11 +212,13 @@ new #[Title('Teams Bot – Gruppenchats')] class extends Component
                 @endif
             @endif
 
-            <flux:textarea
-                wire:model="chatTestMessage"
-                label="Gruppenchat-Testnachricht"
-                rows="3"
-            />
+            @if($this->selectedBot->managesMessaging)
+                <flux:textarea
+                    wire:model="chatTestMessage"
+                    label="Gruppenchat-Testnachricht"
+                    rows="3"
+                />
+            @endif
 
             <div class="flex flex-wrap gap-2">
                 <flux:button
@@ -205,18 +231,22 @@ new #[Title('Teams Bot – Gruppenchats')] class extends Component
                     <span wire:loading wire:target="installBotForChat">Läuft…</span>
                 </flux:button>
 
-                <flux:button
-                    wire:click="sendChatTestMessage"
-                    wire:target="sendChatTestMessage"
-                    wire:loading.attr="disabled"
-                    icon="paper-airplane"
-                    variant="primary"
-                >
-                    <span wire:loading.remove wire:target="sendChatTestMessage">Testnachricht an Gruppenchat senden</span>
-                    <span wire:loading wire:target="sendChatTestMessage">Sende…</span>
-                </flux:button>
+                @if($this->selectedBot->managesMessaging)
+                    <flux:button
+                        wire:click="sendChatTestMessage"
+                        wire:target="sendChatTestMessage"
+                        wire:loading.attr="disabled"
+                        icon="paper-airplane"
+                        variant="primary"
+                    >
+                        <span wire:loading.remove wire:target="sendChatTestMessage">Testnachricht an Gruppenchat senden</span>
+                        <span wire:loading wire:target="sendChatTestMessage">Sende…</span>
+                    </flux:button>
+                @endif
             </div>
         </div>
     </flux:card>
+
+    <x-intranet-app-teams-bot::install-log :installations="$this->catalogInstallations" />
 </x-intranet-app-teams-bot::teams-bot-layout>
 </div>

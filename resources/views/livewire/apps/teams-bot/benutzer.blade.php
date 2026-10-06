@@ -2,6 +2,8 @@
 
 use Flux\Flux;
 use Hwkdo\IntranetAppTeamsBot\Interfaces\TeamsBotServiceInterface;
+use Hwkdo\IntranetAppTeamsBot\Livewire\InteractsWithSelectedTeamsBot;
+use Hwkdo\IntranetAppTeamsBot\Services\TeamsCatalogInstallationService;
 use Hwkdo\MsGraphLaravel\Interfaces\MsGraphUserServiceInterface;
 use Illuminate\Support\Facades\Artisan;
 use Livewire\Attributes\Title;
@@ -9,6 +11,8 @@ use Livewire\Component;
 
 new #[Title('Teams Bot – Benutzer')] class extends Component
 {
+    use InteractsWithSelectedTeamsBot;
+
     public string $search = '';
 
     /** @var array<int, array{id: string, upn: string, displayName: string}> */
@@ -68,16 +72,35 @@ new #[Title('Teams Bot – Benutzer')] class extends Component
             return;
         }
 
+        $displayName = $this->selectedUser['displayName'] !== '' ? $this->selectedUser['displayName'] : null;
+
         try {
-            app(TeamsBotServiceInterface::class)->installForUser(
+            if ($this->selectedBot->managesMessaging) {
+                app(TeamsBotServiceInterface::class)->installForUser(
+                    $this->selectedUser['id'],
+                    $this->selectedUser['upn'],
+                    $displayName,
+                );
+
+                Flux::toast(
+                    variant: 'success',
+                    text: 'Bot-Installation wurde gestartet. Bei Erfolg wird der Status automatisch aktualisiert.'
+                );
+
+                return;
+            }
+
+            app(TeamsCatalogInstallationService::class)->installForUser(
                 $this->selectedUser['id'],
                 $this->selectedUser['upn'],
-                $this->selectedUser['displayName'] !== '' ? $this->selectedUser['displayName'] : null,
+                $displayName,
             );
+
+            $this->forgetCatalogInstallations();
 
             Flux::toast(
                 variant: 'success',
-                text: 'Bot-Installation wurde gestartet. Bei Erfolg wird der Status automatisch aktualisiert.'
+                text: $this->selectedBot->label.' wird installiert. Das Ergebnis steht im Installationsprotokoll.'
             );
         } catch (\Throwable $exception) {
             Flux::toast(variant: 'danger', text: 'Installation fehlgeschlagen: '.$exception->getMessage());
@@ -115,7 +138,9 @@ new #[Title('Teams Bot – Benutzer')] class extends Component
     public function installAllUsers(): void
     {
         try {
-            Artisan::call('teams-bot:install-all');
+            Artisan::call('teams-bot:install-all', [
+                'bot' => $this->selectedBot->key,
+            ]);
 
             Flux::toast(
                 variant: 'success',
@@ -129,12 +154,14 @@ new #[Title('Teams Bot – Benutzer')] class extends Component
 ?>
 
 <div>
-<x-intranet-app-teams-bot::teams-bot-layout heading="Teams Bot" subheading="Benutzer">
+<x-intranet-app-teams-bot::teams-bot-layout :heading="$this->selectedBot->managesMessaging ? 'Teams Bot' : $this->selectedBot->label" subheading="Benutzer">
     <flux:card class="glass-card">
-        <flux:heading size="lg" class="mb-4">Benutzer & Testnachricht</flux:heading>
+        <flux:heading size="lg" class="mb-4">
+            {{ $this->selectedBot->managesMessaging ? 'Benutzer & Testnachricht' : 'Benutzer installieren' }}
+        </flux:heading>
 
         <div class="space-y-4">
-            <div class="relative">
+            <div>
                 <flux:input
                     wire:model.live.debounce.300ms="search"
                     label="Entra-Benutzer suchen"
@@ -142,7 +169,7 @@ new #[Title('Teams Bot – Benutzer')] class extends Component
                 />
 
                 @if($searchResults !== [])
-                    <div class="absolute z-20 mt-1 w-full rounded-xl border border-[#d0e3f9] bg-white shadow-lg dark:border-white/10 dark:bg-[#04214e]">
+                    <div class="mt-1 max-h-64 overflow-y-auto rounded-xl border border-[#d0e3f9] bg-white shadow-lg dark:border-white/10 dark:bg-[#04214e]">
                         @foreach($searchResults as $result)
                             <button
                                 type="button"
@@ -169,11 +196,13 @@ new #[Title('Teams Bot – Benutzer')] class extends Component
                 </div>
             @endif
 
-            <flux:textarea
-                wire:model="testMessage"
-                label="Testnachricht"
-                rows="3"
-            />
+            @if($this->selectedBot->managesMessaging)
+                <flux:textarea
+                    wire:model="testMessage"
+                    label="Testnachricht"
+                    rows="3"
+                />
+            @endif
 
             <div class="flex flex-wrap gap-2">
                 <flux:button
@@ -187,15 +216,17 @@ new #[Title('Teams Bot – Benutzer')] class extends Component
                     <span wire:loading wire:target="installBot">Installiere…</span>
                 </flux:button>
 
-                <flux:button
-                    wire:click="sendTestMessage"
-                    wire:target="sendTestMessage"
-                    wire:loading.attr="disabled"
-                    icon="paper-airplane"
-                >
-                    <span wire:loading.remove wire:target="sendTestMessage">Testnachricht senden</span>
-                    <span wire:loading wire:target="sendTestMessage">Sende…</span>
-                </flux:button>
+                @if($this->selectedBot->managesMessaging)
+                    <flux:button
+                        wire:click="sendTestMessage"
+                        wire:target="sendTestMessage"
+                        wire:loading.attr="disabled"
+                        icon="paper-airplane"
+                    >
+                        <span wire:loading.remove wire:target="sendTestMessage">Testnachricht senden</span>
+                        <span wire:loading wire:target="sendTestMessage">Sende…</span>
+                    </flux:button>
+                @endif
 
                 <flux:button
                     wire:click="installAllUsers"
@@ -203,7 +234,7 @@ new #[Title('Teams Bot – Benutzer')] class extends Component
                     wire:loading.attr="disabled"
                     icon="users"
                     variant="ghost"
-                    wire:confirm="Bot-Installation für alle Entra-Benutzer starten?"
+                    wire:confirm="{{ $this->selectedBot->label }} für alle Entra-Benutzer installieren?"
                 >
                     <span wire:loading.remove wire:target="installAllUsers">Alle Benutzer installieren</span>
                     <span wire:loading wire:target="installAllUsers">Starte…</span>
@@ -211,5 +242,7 @@ new #[Title('Teams Bot – Benutzer')] class extends Component
             </div>
         </div>
     </flux:card>
+
+    <x-intranet-app-teams-bot::install-log :installations="$this->catalogInstallations" />
 </x-intranet-app-teams-bot::teams-bot-layout>
 </div>
