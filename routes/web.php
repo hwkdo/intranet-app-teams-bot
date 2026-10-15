@@ -1,8 +1,6 @@
 <?php
 
-use Livewire\Volt\Volt;
 use Illuminate\Support\Facades\Route;
-
 
 Route::middleware(['web', 'auth', 'can:manage-app-teams-bot'])->group(function (): void {
     Route::livewire('apps/teams-bot/status', 'intranet-app-teams-bot::apps.teams-bot.status')
@@ -33,16 +31,9 @@ Route::middleware(['web', 'auth', 'can:manage-app-teams-bot'])->group(function (
         ->name('apps.teams-bot.admin.ki');
 });
 
-
 Route::middleware(['web', 'auth', 'can:see-app-teams-bot'])->group(function (): void {
     Route::redirect('apps/teams-bot', '/apps/teams-bot/status')->name('apps.teams-bot.index');
 
     Route::livewire('apps/teams-bot/info', 'intranet-app-teams-bot::apps.teams-bot.info')
         ->name('apps.teams-bot.info');
 });
-
-Route::middleware(['web', 'auth', 'can:manage-app-teams-bot'])->group(function (): void {
-    Volt::route('apps/teams-bot/admin/background-activities', 'apps.teams-bot.admin.background-activities')
-        ->name('apps.teams-bot.admin.background-activities');
-});
-

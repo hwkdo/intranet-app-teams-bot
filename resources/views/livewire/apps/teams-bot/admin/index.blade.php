@@ -11,7 +11,7 @@ new #[Title('Teams Bot – Admin')] class extends Component
     {
         $tab = request()->query('tab');
 
-        if (is_string($tab) && in_array($tab, ['ki', 'einstellungen', 'hintergrundbild'], true)) {
+        if (is_string($tab) && in_array($tab, ['ki', 'einstellungen', 'hintergrundbild', 'hintergrund'], true)) {
             $this->activeTab = $tab;
         }
     }
@@ -25,6 +25,7 @@ new #[Title('Teams Bot – Admin')] class extends Component
             <flux:tab name="ki" icon="sparkles">KI</flux:tab>
             <flux:tab name="einstellungen" icon="cog-6-tooth">Einstellungen</flux:tab>
             <flux:tab name="hintergrundbild" icon="photo">Hintergrundbild</flux:tab>
+            <flux:tab name="hintergrund" icon="clock">Hintergrund</flux:tab>
         </flux:tabs>
 
         <flux:tab.panel name="ki">
@@ -67,6 +68,13 @@ new #[Title('Teams Bot – Admin')] class extends Component
                 </div>
             @endif
         </flux:tab.panel>
+    <flux:tab.panel name="hintergrund">
+        @if ($activeTab === 'hintergrund')
+            <div class="min-h-[400px]">
+                @livewire('intranet-app-base::background-activities', ['appIdentifier' => 'teams-bot'], key('teams-bot-admin-hintergrund'))
+            </div>
+        @endif
+    </flux:tab.panel>
     </flux:tab.group>
 </x-intranet-app-teams-bot::teams-bot-layout>
 </div>
