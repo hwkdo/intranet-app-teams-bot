@@ -15,6 +15,7 @@ use Hwkdo\MsGraphLaravel\Services\TeamsActivityNotificationService;
 use Hwkdo\MsGraphLaravel\Services\TeamsAppInstallationService;
 use Hwkdo\MsGraphLaravel\Services\TeamsDirectoryService;
 use Livewire\Livewire;
+use Livewire\Volt\Volt;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -64,6 +65,10 @@ class IntranetAppTeamsBotServiceProvider extends PackageServiceProvider
     public function boot(): void
     {
         parent::boot();
+
+        $this->app->booted(function (): void {
+            Volt::mount(__DIR__.'/../resources/views/livewire');
+        });
 
         Livewire::addNamespace(
             namespace: 'intranet-app-teams-bot',

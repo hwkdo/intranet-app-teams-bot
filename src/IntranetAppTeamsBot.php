@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTeamsBot;
 
+use Hwkdo\IntranetAppBase\Interfaces\ProvidesBackgroundActivitiesInterface;
+use Hwkdo\IntranetAppTeamsBot\Background\TeamsBotBackgroundActivities;
 use Hwkdo\IntranetAppBase\Interfaces\IntranetAppInterface;
 use Illuminate\Support\Collection;
 
-class IntranetAppTeamsBot implements IntranetAppInterface
+class IntranetAppTeamsBot implements IntranetAppInterface, ProvidesBackgroundActivitiesInterface
 {
     public static function app_name(): string
     {
@@ -48,4 +50,11 @@ class IntranetAppTeamsBot implements IntranetAppInterface
     {
         return [];
     }
+
+    public static function backgroundActivities(): array
+    {
+        return TeamsBotBackgroundActivities::definitions();
+    }
+
+
 }
