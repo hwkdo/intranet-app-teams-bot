@@ -21,6 +21,12 @@ new class extends Component
 
     public string $aiImageModelOverride = '';
 
+    public string $aiImageEditModelOverride = '';
+
+    public string $aiClassificationProviderOverride = '';
+
+    public string $aiClassificationModelOverride = '';
+
     public bool $aiChatEnabled = true;
 
     public string $aiChatTriggerPhrase = 'frag die ki';
@@ -39,11 +45,20 @@ new class extends Component
         $this->aiTextModelOverride = $settings->textModelOverride() ?? '';
         $this->aiImageProviderOverride = $settings->aiImageProviderOverride?->value ?? '';
         $this->aiImageModelOverride = $settings->imageModelOverride() ?? '';
+        $this->aiImageEditModelOverride = $settings->imageEditModelOverride() ?? '';
+        $this->aiClassificationProviderOverride = $settings->aiClassificationProviderOverride?->value ?? '';
+        $this->aiClassificationModelOverride = $settings->classificationModelOverride() ?? '';
         $this->aiChatEnabled = $settings->aiChatEnabled;
         $this->aiChatTriggerPhrase = $settings->aiChatTriggerPhrase;
         $this->aiChatSystemPrompt = $settings->aiChatSystemPrompt;
         $this->aiChatMissingPromptMessage = $settings->aiChatMissingPromptMessage;
         $this->aiChatErrorMessage = $settings->aiChatErrorMessage;
+    }
+
+    public function updatedAiImageProviderOverride(): void
+    {
+        $this->aiImageModelOverride = '';
+        $this->aiImageEditModelOverride = '';
     }
 
     public function save(): void
@@ -53,6 +68,9 @@ new class extends Component
             'aiTextModelOverride' => 'nullable|string|max:100',
             'aiImageProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
             'aiImageModelOverride' => 'nullable|string|max:100',
+            'aiImageEditModelOverride' => 'nullable|string|max:150',
+            'aiClassificationProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
+            'aiClassificationModelOverride' => 'nullable|string|max:150',
             'aiChatEnabled' => 'boolean',
             'aiChatTriggerPhrase' => 'required|string|max:100',
             'aiChatSystemPrompt' => 'nullable|string|max:5000',
@@ -67,6 +85,9 @@ new class extends Component
             'aiTextModelOverride' => $this->blankToNull($this->aiTextModelOverride),
             'aiImageProviderOverride' => $this->parseProviderOverride($this->aiImageProviderOverride),
             'aiImageModelOverride' => $this->blankToNull($this->aiImageModelOverride),
+            'aiImageEditModelOverride' => $this->blankToNull($this->aiImageEditModelOverride),
+            'aiClassificationProviderOverride' => $this->parseProviderOverride($this->aiClassificationProviderOverride),
+            'aiClassificationModelOverride' => $this->blankToNull($this->aiClassificationModelOverride),
             'aiChatEnabled' => $this->aiChatEnabled,
             'aiChatTriggerPhrase' => trim($this->aiChatTriggerPhrase),
             'aiChatSystemPrompt' => trim($this->aiChatSystemPrompt),
@@ -93,9 +114,26 @@ new class extends Component
     }
 
     #[Computed]
+    public function baseAiClassificationSummary(): string
+    {
+        $base = app(IntranetBaseAiConfigSourceInterface::class);
+        $model = $base->classificationModel() ?? 'Provider-Standard';
+
+        return $base->classificationProvider()->label().' / '.$model;
+    }
+
+    #[Computed]
     public function effectiveAiTextSummary(): string
     {
         $resolved = app(AiConfigResolverInterface::class)->resolve('teams-bot', AiCapability::Text);
+
+        return $resolved->provider->label().' / '.($resolved->model ?? 'Provider-Standard');
+    }
+
+    #[Computed]
+    public function effectiveAiClassificationSummary(): string
+    {
+        $resolved = app(AiConfigResolverInterface::class)->resolve('teams-bot', AiCapability::Classification);
 
         return $resolved->provider->label().' / '.($resolved->model ?? 'Provider-Standard');
     }
@@ -137,7 +175,8 @@ new class extends Component
             <flux:callout class="mb-4" icon="information-circle">
                 <flux:callout.heading>Globale KI-Standards</flux:callout.heading>
                 <flux:callout.text>
-                    Text: <strong>{{ $this->baseAiTextSummary }}</strong>
+                    Text: <strong>{{ $this->baseAiTextSummary }}</strong><br>
+                    Klassifikation: <strong>{{ $this->baseAiClassificationSummary }}</strong>
                     — änderbar unter Manager → Base Settings.
                 </flux:callout.text>
             </flux:callout>
@@ -147,6 +186,10 @@ new class extends Component
                 ai-text-model-override="aiTextModelOverride"
                 ai-image-provider-override="aiImageProviderOverride"
                 ai-image-model-override="aiImageModelOverride"
+                ai-image-edit-model-override="aiImageEditModelOverride"
+                :image-provider="$aiImageProviderOverride"
+                ai-classification-provider-override="aiClassificationProviderOverride"
+                ai-classification-model-override="aiClassificationModelOverride"
             />
 
             <flux:text class="mt-4 text-sm text-zinc-500">
