@@ -48,6 +48,7 @@ new #[Title('Teams Bot – Admin')] class extends Component
                             'aiTextModelOverride',
                             'aiImageProviderOverride',
                             'aiImageModelOverride',
+                            'aiImageEditProviderOverride',
                             'aiImageEditModelOverride',
                             'aiClassificationProviderOverride',
                             'aiClassificationModelOverride',

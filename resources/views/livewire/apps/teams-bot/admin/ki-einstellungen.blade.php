@@ -21,6 +21,8 @@ new class extends Component
 
     public string $aiImageModelOverride = '';
 
+    public string $aiImageEditProviderOverride = '';
+
     public string $aiImageEditModelOverride = '';
 
     public string $aiClassificationProviderOverride = '';
@@ -45,6 +47,7 @@ new class extends Component
         $this->aiTextModelOverride = $settings->textModelOverride() ?? '';
         $this->aiImageProviderOverride = $settings->aiImageProviderOverride?->value ?? '';
         $this->aiImageModelOverride = $settings->imageModelOverride() ?? '';
+        $this->aiImageEditProviderOverride = $settings->aiImageEditProviderOverride?->value ?? '';
         $this->aiImageEditModelOverride = $settings->imageEditModelOverride() ?? '';
         $this->aiClassificationProviderOverride = $settings->aiClassificationProviderOverride?->value ?? '';
         $this->aiClassificationModelOverride = $settings->classificationModelOverride() ?? '';
@@ -58,6 +61,10 @@ new class extends Component
     public function updatedAiImageProviderOverride(): void
     {
         $this->aiImageModelOverride = '';
+    }
+
+    public function updatedAiImageEditProviderOverride(): void
+    {
         $this->aiImageEditModelOverride = '';
     }
 
@@ -68,6 +75,7 @@ new class extends Component
             'aiTextModelOverride' => 'nullable|string|max:100',
             'aiImageProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
             'aiImageModelOverride' => 'nullable|string|max:100',
+            'aiImageEditProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
             'aiImageEditModelOverride' => 'nullable|string|max:150',
             'aiClassificationProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
             'aiClassificationModelOverride' => 'nullable|string|max:150',
@@ -85,6 +93,7 @@ new class extends Component
             'aiTextModelOverride' => $this->blankToNull($this->aiTextModelOverride),
             'aiImageProviderOverride' => $this->parseProviderOverride($this->aiImageProviderOverride),
             'aiImageModelOverride' => $this->blankToNull($this->aiImageModelOverride),
+            'aiImageEditProviderOverride' => $this->parseProviderOverride($this->aiImageEditProviderOverride),
             'aiImageEditModelOverride' => $this->blankToNull($this->aiImageEditModelOverride),
             'aiClassificationProviderOverride' => $this->parseProviderOverride($this->aiClassificationProviderOverride),
             'aiClassificationModelOverride' => $this->blankToNull($this->aiClassificationModelOverride),
@@ -186,8 +195,10 @@ new class extends Component
                 ai-text-model-override="aiTextModelOverride"
                 ai-image-provider-override="aiImageProviderOverride"
                 ai-image-model-override="aiImageModelOverride"
+                ai-image-edit-provider-override="aiImageEditProviderOverride"
                 ai-image-edit-model-override="aiImageEditModelOverride"
                 :image-provider="$aiImageProviderOverride"
+                :image-edit-provider="$aiImageEditProviderOverride"
                 ai-classification-provider-override="aiClassificationProviderOverride"
                 ai-classification-model-override="aiClassificationModelOverride"
             />
